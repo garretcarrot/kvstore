@@ -1,8 +1,8 @@
 package kvstore
 
-import akka.actor.Props
-import akka.actor.Actor
-import akka.actor.ActorRef
+import akka.actor.{Actor, ActorRef, Props, ReceiveTimeout}
+import kvstore.Replicator._
+
 import scala.concurrent.duration._
 
 object Replicator {
@@ -16,16 +16,12 @@ object Replicator {
 }
 
 class Replicator(val replica: ActorRef) extends Actor {
-  import Replicator._
-  import Replica._
-  import context.dispatcher
-  
-  /*
-   * The contents of this actor is just a suggestion, you can implement it in any way you like.
-   */
+
+  context.setReceiveTimeout(100.millis)
 
   // map from sequence number to pair of sender and request
   var acks = Map.empty[Long, (ActorRef, Replicate)]
+
   // a sequence of not-yet-sent snapshots (you can disregard this if not implementing batching)
   var pending = Vector.empty[Snapshot]
   
@@ -35,11 +31,27 @@ class Replicator(val replica: ActorRef) extends Actor {
     _seqCounter += 1
     ret
   }
-
   
-  /* TODO Behavior for the Replicator. */
   def receive: Receive = {
-    case _ =>
+    case replicationRequest @ Replicate(key, valueOption, id) =>
+      val seq = nextSeq
+      val primaryNode = sender()
+      acks = acks.updated(seq, (primaryNode, replicationRequest))
+      replica ! Snapshot(key, valueOption, seq)
+
+    case SnapshotAck(key, seq) =>
+      acks.get(seq) match {
+        case None =>
+        case Some((primaryReplica, Replicate(key2, valueOption, id))) =>
+          acks -= seq
+          primaryReplica ! Replicated(key2, id)
+      }
+
+    case ReceiveTimeout =>
+      acks foreach {
+        case (seq, (primaryReplica, Replicate(key, valueOption, id))) =>
+          replica ! Snapshot(key, valueOption, seq)
+      }
   }
 
 }
