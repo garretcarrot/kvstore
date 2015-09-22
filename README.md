@@ -2,7 +2,17 @@
 
 (Assignment #6 from the [Principles of Reactive Programming](https://www.coursera.org/course/reactive) class on Coursera.)
 
+## tl;dr
+
+Run some tests.
+
+    git clone git@github.com:garretcarrot/kvstore.git
+    cd kvstore
+    sbt test
+
 ***
+
+## Not long enough; will read again
 
 A key-value store is a very simple form of a database. Its entries are key-value pairs, the key part acting as a unique identifier, and the value being arbitrary data. In recent years, distributed versions of key-value stores have become very popular. Your task in this assignment is to implement a distributed, replicated storage of key-value pairs. Each node (the replicas) in this distributed system will be represented by one actor. You will also have to define some helper actors.
 
